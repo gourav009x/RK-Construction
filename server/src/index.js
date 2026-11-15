@@ -278,8 +278,9 @@ app.post("/api/enquiries", async (req, res, next) => {
       message
     });
 
-    try {
-      await sendEnquiryEmail({
+    // Send email notification asynchronously without blocking client response
+    if (process.env.MAIL_USER && process.env.MAIL_PASS) {
+      sendEnquiryEmail({
         id: enquiry._id,
         name,
         phone,
@@ -288,10 +289,9 @@ app.post("/api/enquiries", async (req, res, next) => {
         location,
         budget,
         message
-      });
-      console.log("Enquiry notification email sent successfully!");
-    } catch (emailError) {
-      console.error("Email sending failed:", emailError.message);
+      })
+        .then(() => console.log("Enquiry notification email sent successfully!"))
+        .catch(emailError => console.error("Email sending notice:", emailError.message));
     }
 
     res.status(201).json({
