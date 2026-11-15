@@ -19,7 +19,11 @@ const app = express();
 const port = Number(process.env.PORT || 5000);
 
 const getPublicApiUrl = req => {
-  if (process.env.API_PUBLIC_URL) {
+  if (
+    process.env.API_PUBLIC_URL &&
+    !process.env.API_PUBLIC_URL.includes("YOUR-BACKEND-NAME") &&
+    !process.env.API_PUBLIC_URL.includes("your-backend-app")
+  ) {
     return process.env.API_PUBLIC_URL.replace(/\/$/, "");
   }
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
