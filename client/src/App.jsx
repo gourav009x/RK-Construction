@@ -21,7 +21,9 @@ const API = (
   import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 ).replace(/\/$/, "");
 
-const API_ORIGIN = new URL(API).origin;
+const API_ORIGIN = typeof window !== "undefined"
+  ? (API.startsWith("http") ? new URL(API).origin : window.location.origin)
+  : "";
 
 const PHONE = import.meta.env.VITE_PHONE_NUMBER || "";
 

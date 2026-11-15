@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 
 import express from "express";
@@ -9,32 +8,44 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import validator from "validator";
 import multer from "multer";
+import mongoose from "mongoose";
 
-import pool from "./db.js";
+import { connectDB } from "./db.js";
+import { Project, Enquiry, Admin } from "./models.js";
 import { requireAdmin } from "./middleware.js";
 import { sendEnquiryEmail } from "./mailer.js";
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
 
-const publicApiUrl = (
-  process.env.API_PUBLIC_URL || `http://localhost:${port}/api`
-).replace(/\/$/, "");
+const getPublicApiUrl = req => {
+  if (process.env.API_PUBLIC_URL) {
+    return process.env.API_PUBLIC_URL.replace(/\/$/, "");
+  }
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  return `${protocol}://${host}/api`;
+};
 
 // --------------------------------------------------
 // CORS CONFIGURATION
 // --------------------------------------------------
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173"
-];
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim())
+  : ["http://localhost:5173", "http://127.0.0.1:5173"];
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(null, true);
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
   })
 );
 
@@ -60,23 +71,15 @@ app.use(express.json({ limit: "150kb" }));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-
   limits: {
     fileSize: 5 * 1024 * 1024,
     files: 1
   },
-
-  fileFilter: (req, file, callback) => {
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ];
+  fileFilter: (_req, file, callback) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.mimetype)) {
-      return callback(
-        new Error("Only JPG, PNG and WebP images are allowed.")
-      );
+      return callback(new Error("Only JPG, PNG and WebP images are allowed."));
     }
 
     callback(null, true);
@@ -111,8 +114,7 @@ app.use(
 // HELPER FUNCTIONS
 // --------------------------------------------------
 
-const clean = (value, max = 2000) =>
-  String(value ?? "").trim().slice(0, max);
+const clean = (value, max = 2000) => String(value ?? "").trim().slice(0, max);
 
 const safeUrl = value => {
   try {
@@ -148,41 +150,20 @@ const enquiryStatuses = [
   "Closed"
 ];
 
-// --------------------------------------------------
-// GET ONE PROJECT
-// --------------------------------------------------
-
-async function getProject(id) {
-  const [rows] = await pool.execute(
-    `SELECT
-      id,
-      title,
-      category,
-      location,
-      description,
-      CASE
-        WHEN image_data IS NOT NULL
-        THEN CONCAT(?, '/projects/', id, '/image')
-        ELSE image_url
-      END AS imageUrl,
-      featured,
-      created_at AS createdAt,
-      updated_at AS updatedAt
-    FROM projects
-    WHERE id = ?`,
-    [publicApiUrl, id]
-  );
-
-  if (!rows.length) return null;
-
-  const [images] = await pool.execute(
-    "SELECT image_url FROM project_images WHERE project_id = ? ORDER BY id",
-    [id]
-  );
-
+function formatProject(p, baseUrl) {
+  const hasImageData = Boolean(p.imageData && p.imageData.length);
   return {
-    ...rows[0],
-    gallery: images.map(image => image.image_url)
+    id: p._id.toString(),
+    _id: p._id,
+    title: p.title,
+    category: p.category,
+    location: p.location,
+    description: p.description,
+    imageUrl: hasImageData ? `${baseUrl}/projects/${p._id}/image` : p.imageUrl || "",
+    gallery: p.gallery || [],
+    featured: Boolean(p.featured),
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt
   };
 }
 
@@ -190,46 +171,41 @@ async function getProject(id) {
 // HEALTH CHECK
 // --------------------------------------------------
 
-app.get("/api/health", (req, res) => {
+app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    service: "RK Construction API"
+    service: "RK Construction API",
+    database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
   });
 });
 
 // --------------------------------------------------
-// SERVE PROJECT IMAGE FROM MYSQL
+// SERVE PROJECT IMAGE FROM MONGODB
 // --------------------------------------------------
 
 app.get("/api/projects/:id/image", async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const { id } = req.params;
 
-    if (!Number.isSafeInteger(id) || id <= 0) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         message: "Invalid project ID."
       });
     }
 
-    const [rows] = await pool.execute(
-      `SELECT image_data, image_mime_type
-       FROM projects
-       WHERE id = ?`,
-      [id]
-    );
+    const project = await Project.findById(id).select("imageData imageMimeType");
 
-    if (!rows.length || !rows[0].image_data) {
+    if (!project || !project.imageData) {
       return res.status(404).json({
         message: "Image not found."
       });
     }
 
-    res.setHeader("Content-Type", rows[0].image_mime_type);
+    res.setHeader("Content-Type", project.imageMimeType || "image/jpeg");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.setHeader("X-Content-Type-Options", "nosniff");
 
-    return res.send(rows[0].image_data);
-
+    return res.send(project.imageData);
   } catch (error) {
     next(error);
   }
@@ -241,46 +217,20 @@ app.get("/api/projects/:id/image", async (req, res, next) => {
 
 app.get("/api/projects", async (req, res, next) => {
   try {
-    let sql = `
-      SELECT
-        id,
-        title,
-        category,
-        location,
-        description,
-        CASE
-          WHEN image_data IS NOT NULL
-          THEN CONCAT(?, '/projects/', id, '/image')
-          ELSE image_url
-        END AS imageUrl,
-        featured,
-        created_at AS createdAt,
-        updated_at AS updatedAt
-      FROM projects
-    `;
-
-    const params = [publicApiUrl];
+    const filter = {};
 
     if (req.query.category && req.query.category !== "All") {
-      sql += " WHERE category = ?";
-      params.push(clean(req.query.category, 60));
+      filter.category = clean(req.query.category, 60);
     }
 
-    sql += " ORDER BY featured DESC, created_at DESC LIMIT 60";
+    const projectsRaw = await Project.find(filter)
+      .sort({ featured: -1, createdAt: -1 })
+      .limit(60);
 
-    const [projects] = await pool.execute(sql, params);
-
-    for (const project of projects) {
-      const [images] = await pool.execute(
-        "SELECT image_url FROM project_images WHERE project_id = ? ORDER BY id",
-        [project.id]
-      );
-
-      project.gallery = images.map(image => image.image_url);
-    }
+    const baseUrl = getPublicApiUrl(req);
+    const projects = projectsRaw.map(p => formatProject(p, baseUrl));
 
     res.json({ projects });
-
   } catch (error) {
     next(error);
   }
@@ -318,34 +268,27 @@ app.post("/api/enquiries", async (req, res, next) => {
       });
     }
 
-    const [result] = await pool.execute(
-      `INSERT INTO enquiries
-       (name, phone, email, project_type, location, budget, message)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name,
-        phone,
-        email || null,
-        projectType,
-        location,
-        budget || null,
-        message
-      ]
-    );
-
-    const enquiry = {
-      id: result.insertId,
+    const enquiry = await Enquiry.create({
       name,
       phone,
-      email,
+      email: email || undefined,
       projectType,
       location,
-      budget,
+      budget: budget || undefined,
       message
-    };
+    });
 
     try {
-      await sendEnquiryEmail(enquiry);
+      await sendEnquiryEmail({
+        id: enquiry._id,
+        name,
+        phone,
+        email,
+        projectType,
+        location,
+        budget,
+        message
+      });
       console.log("Enquiry notification email sent successfully!");
     } catch (emailError) {
       console.error("Email sending failed:", emailError.message);
@@ -353,9 +296,8 @@ app.post("/api/enquiries", async (req, res, next) => {
 
     res.status(201).json({
       message: "Thank you! Your enquiry has been received.",
-      id: result.insertId
+      id: enquiry._id
     });
-
   } catch (error) {
     next(error);
   }
@@ -367,61 +309,40 @@ app.post("/api/enquiries", async (req, res, next) => {
 
 app.post("/api/auth/setup", async (req, res, next) => {
   try {
-    if (
-      !process.env.SETUP_KEY ||
-      req.body.setupKey !== process.env.SETUP_KEY
-    ) {
+    if (!process.env.SETUP_KEY || req.body.setupKey !== process.env.SETUP_KEY) {
       return res.status(403).json({
         message: "Setup is disabled."
       });
     }
 
-    const [admins] = await pool.execute(
-      "SELECT COUNT(*) AS total FROM admins"
-    );
-
-    if (admins[0].total > 0) {
+    const count = await Admin.countDocuments();
+    if (count > 0) {
       return res.status(409).json({
         message: "An admin already exists."
       });
     }
 
-    const name = clean(
-      req.body.name || process.env.ADMIN_NAME,
-      100
-    );
+    const name = clean(req.body.name || process.env.ADMIN_NAME, 100);
+    const email = clean(req.body.email || process.env.ADMIN_EMAIL, 254).toLowerCase();
+    const password = String(req.body.password || process.env.ADMIN_PASSWORD || "");
 
-    const email = clean(
-      req.body.email || process.env.ADMIN_EMAIL,
-      254
-    ).toLowerCase();
-
-    const password = String(
-      req.body.password || process.env.ADMIN_PASSWORD || ""
-    );
-
-    if (
-      !name ||
-      !validator.isEmail(email) ||
-      password.length < 12
-    ) {
+    if (!name || !validator.isEmail(email) || password.length < 12) {
       return res.status(400).json({
-        message:
-          "Use a name, valid email and password of at least 12 characters."
+        message: "Use a name, valid email and password of at least 12 characters."
       });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await pool.execute(
-      "INSERT INTO admins (name, email, password_hash) VALUES (?, ?, ?)",
-      [name, email, passwordHash]
-    );
+    await Admin.create({
+      name,
+      email,
+      passwordHash
+    });
 
     res.status(201).json({
       message: "Admin created successfully."
     });
-
   } catch (error) {
     next(error);
   }
@@ -442,17 +363,9 @@ app.post(
       const email = clean(req.body.email, 254).toLowerCase();
       const password = String(req.body.password || "");
 
-      const [rows] = await pool.execute(
-        "SELECT id, name, email, password_hash FROM admins WHERE email = ? LIMIT 1",
-        [email]
-      );
+      const admin = await Admin.findOne({ email });
 
-      const admin = rows[0];
-
-      if (
-        !admin ||
-        !(await bcrypt.compare(password, admin.password_hash))
-      ) {
+      if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
         return res.status(401).json({
           message: "Email or password is incorrect."
         });
@@ -464,7 +377,7 @@ app.post(
 
       const token = jwt.sign(
         {
-          sub: String(admin.id),
+          sub: String(admin._id),
           email: admin.email,
           name: admin.name
         },
@@ -481,7 +394,6 @@ app.post(
           email: admin.email
         }
       });
-
     } catch (error) {
       next(error);
     }
@@ -492,28 +404,28 @@ app.post(
 // GET ALL ENQUIRIES FOR ADMIN
 // --------------------------------------------------
 
-app.get("/api/admin/enquiries", requireAdmin, async (req, res, next) => {
+app.get("/api/admin/enquiries", requireAdmin, async (_req, res, next) => {
   try {
-    const [enquiries] = await pool.execute(
-      `SELECT
-        id,
-        name,
-        phone,
-        email,
-        project_type AS projectType,
-        location,
-        budget,
-        message,
-        status,
-        created_at AS createdAt,
-        updated_at AS updatedAt
-       FROM enquiries
-       ORDER BY created_at DESC
-       LIMIT 500`
-    );
+    const rawEnquiries = await Enquiry.find()
+      .sort({ createdAt: -1 })
+      .limit(500);
+
+    const enquiries = rawEnquiries.map(e => ({
+      id: e._id.toString(),
+      _id: e._id,
+      name: e.name,
+      phone: e.phone,
+      email: e.email,
+      projectType: e.projectType,
+      location: e.location,
+      budget: e.budget,
+      message: e.message,
+      status: e.status,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt
+    }));
 
     res.json({ enquiries });
-
   } catch (error) {
     next(error);
   }
@@ -523,62 +435,55 @@ app.get("/api/admin/enquiries", requireAdmin, async (req, res, next) => {
 // UPDATE ENQUIRY STATUS
 // --------------------------------------------------
 
-app.patch(
-  "/api/admin/enquiries/:id",
-  requireAdmin,
-  async (req, res, next) => {
-    try {
-      const id = Number(req.params.id);
-      const status = req.body.status;
+app.patch("/api/admin/enquiries/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
 
-      if (!Number.isSafeInteger(id) || id <= 0) {
-        return res.status(400).json({
-          message: "Invalid record identifier."
-        });
-      }
-
-      if (!enquiryStatuses.includes(status)) {
-        return res.status(400).json({
-          message: "Invalid status."
-        });
-      }
-
-      const [result] = await pool.execute(
-        "UPDATE enquiries SET status = ? WHERE id = ?",
-        [status, id]
-      );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({
-          message: "Enquiry not found."
-        });
-      }
-
-      const [rows] = await pool.execute(
-        `SELECT
-          id,
-          name,
-          phone,
-          email,
-          project_type AS projectType,
-          location,
-          budget,
-          message,
-          status,
-          created_at AS createdAt,
-          updated_at AS updatedAt
-         FROM enquiries
-         WHERE id = ?`,
-        [id]
-      );
-
-      res.json({ enquiry: rows[0] });
-
-    } catch (error) {
-      next(error);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid record identifier."
+      });
     }
+
+    if (!enquiryStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid status."
+      });
+    }
+
+    const enquiry = await Enquiry.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!enquiry) {
+      return res.status(404).json({
+        message: "Enquiry not found."
+      });
+    }
+
+    res.json({
+      enquiry: {
+        id: enquiry._id.toString(),
+        _id: enquiry._id,
+        name: enquiry.name,
+        phone: enquiry.phone,
+        email: enquiry.email,
+        projectType: enquiry.projectType,
+        location: enquiry.location,
+        budget: enquiry.budget,
+        message: enquiry.message,
+        status: enquiry.status,
+        createdAt: enquiry.createdAt,
+        updatedAt: enquiry.updatedAt
+      }
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // --------------------------------------------------
 // ADD PROJECT WITH IMAGE UPLOAD
@@ -589,9 +494,6 @@ app.post(
   requireAdmin,
   upload.single("image"),
   async (req, res, next) => {
-    let connection;
-    let transactionStarted = false;
-
     try {
       const title = clean(req.body.title, 120);
       const category = clean(req.body.category, 60);
@@ -600,8 +502,7 @@ app.post(
 
       if (!title || !category || !location || !description || !req.file) {
         return res.status(400).json({
-          message:
-            "Complete all required fields and select a project image."
+          message: "Complete all required fields and select a project image."
         });
       }
 
@@ -611,9 +512,7 @@ app.post(
         });
       }
 
-      // Gallery images remain URL-based.
       let gallery = [];
-
       if (req.body.gallery) {
         try {
           const parsedGallery =
@@ -631,65 +530,23 @@ app.post(
         }
       }
 
-      connection = await pool.getConnection();
+      const project = await Project.create({
+        title,
+        category,
+        location,
+        description,
+        imageData: req.file.buffer,
+        imageMimeType: req.file.mimetype,
+        imageName: clean(req.file.originalname, 255),
+        imageUrl: "",
+        gallery,
+        featured: ["true", "1", "yes"].includes(String(req.body.featured).toLowerCase())
+      });
 
-      await connection.beginTransaction();
-      transactionStarted = true;
-
-      const [result] = await connection.execute(
-        `INSERT INTO projects
-          (
-            title,
-            category,
-            location,
-            description,
-            image_url,
-            image_data,
-            image_mime_type,
-            image_name,
-            featured
-          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          title,
-          category,
-          location,
-          description,
-          "",
-          req.file.buffer,
-          req.file.mimetype,
-          clean(req.file.originalname, 255),
-          ["true", "1", "yes"].includes(
-            String(req.body.featured).toLowerCase()
-          )
-        ]
-      );
-
-      const projectId = result.insertId;
-
-      for (const image of gallery) {
-        await connection.execute(
-          "INSERT INTO project_images (project_id, image_url) VALUES (?, ?)",
-          [projectId, image]
-        );
-      }
-
-      await connection.commit();
-      transactionStarted = false;
-
-      const project = await getProject(projectId);
-
-      res.status(201).json({ project });
-
+      const baseUrl = getPublicApiUrl(req);
+      res.status(201).json({ project: formatProject(project, baseUrl) });
     } catch (error) {
-      if (connection && transactionStarted) {
-        await connection.rollback();
-      }
-
       next(error);
-
-    } finally {
-      if (connection) connection.release();
     }
   }
 );
@@ -698,45 +555,37 @@ app.post(
 // DELETE PROJECT
 // --------------------------------------------------
 
-app.delete(
-  "/api/admin/projects/:id",
-  requireAdmin,
-  async (req, res, next) => {
-    try {
-      const id = Number(req.params.id);
+app.delete("/api/admin/projects/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-      if (!Number.isSafeInteger(id) || id <= 0) {
-        return res.status(400).json({
-          message: "Invalid record identifier."
-        });
-      }
-
-      const [result] = await pool.execute(
-        "DELETE FROM projects WHERE id = ?",
-        [id]
-      );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({
-          message: "Project not found."
-        });
-      }
-
-      res.json({
-        message: "Project deleted."
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid record identifier."
       });
-
-    } catch (error) {
-      next(error);
     }
+
+    const result = await Project.findByIdAndDelete(id);
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Project not found."
+      });
+    }
+
+    res.json({
+      message: "Project deleted."
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 // --------------------------------------------------
 // ERROR HANDLER
 // --------------------------------------------------
 
-app.use((error, req, res, next) => {
+app.use((error, _req, res, _next) => {
   console.error(error);
 
   if (error instanceof multer.MulterError) {
@@ -751,26 +600,21 @@ app.use((error, req, res, next) => {
     });
   }
 
-  if (
-    error.message === "Only JPG, PNG and WebP images are allowed."
-  ) {
+  if (error.message === "Only JPG, PNG and WebP images are allowed.") {
     return res.status(400).json({
       message: error.message
     });
   }
 
-  if (error.code === "ER_NO_REFERENCED_ROW_2") {
+  if (error.name === "ValidationError") {
     return res.status(400).json({
-      message: "Related record was not found."
+      message: "Some submitted information is invalid."
     });
   }
 
-  if (
-    error.code === "ER_DATA_TOO_LONG" ||
-    error.code === "ER_TRUNCATED_WRONG_VALUE"
-  ) {
+  if (error.name === "CastError") {
     return res.status(400).json({
-      message: "Some submitted information is invalid."
+      message: "Invalid record identifier."
     });
   }
 
@@ -780,23 +624,17 @@ app.use((error, req, res, next) => {
 });
 
 // --------------------------------------------------
-// START SERVER AFTER CHECKING MYSQL CONNECTION
+// START SERVER AFTER CONNECTING TO MONGODB
 // --------------------------------------------------
 
-async function startServer() {
-  try {
-    await pool.query("SELECT 1");
-
-    console.log("MySQL connected successfully!");
-
+connectDB()
+  .then(() => {
     app.listen(port, () => {
       console.log(`RK Construction API listening on port ${port}`);
     });
+  })
+  .catch(error => {
+    console.error("Server startup error:", error.message);
+  });
 
-  } catch (error) {
-    console.error("MySQL connection failed:", error.message);
-    process.exit(1);
-  }
-}
-
-startServer();
+export default app;
