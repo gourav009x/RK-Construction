@@ -136,9 +136,13 @@ const services = [
 ];
 // WhatsApp link
 function waLink(message = "Hello, I want to discuss a construction project.") {
+  if (!WHATSAPP) return "#";
+
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`;
 }
 
+console.log("WhatsApp number:", WHATSAPP);
+console.log("WhatsApp link:", waLink());
 // Header
 function Header() {
   const [open, setOpen] = useState(false);
@@ -380,16 +384,21 @@ async function submit(e) {
         </div>
       )}
 
-      {state.error && (
-        <div className="notice error">
-          {state.error}{" "}
-          {WHATSAPP && (
-            <a href={waLink()}>
-              Message us on WhatsApp
-            </a>
-          )}
-        </div>
-      )}
+      
+{state.error && (
+  <div className="notice error">
+    {state.error}{" "}
+    {WHATSAPP && (
+      <a
+        href={waLink()}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Message us on WhatsApp
+      </a>
+    )}
+  </div>
+)}
 
       <div className="form-grid">
         <label>
