@@ -69,37 +69,46 @@ function getProjectImage(project) {
     : "";
 }
 
-// Demo projects
+
 const demoProjects = [
   {
     _id: "demo-1",
-    title: "Residential Construction",
-    category: "New Construction",
+    title: "Residential Building Construction",
+    category: "New Building Construction",
     location: "Delhi NCR",
-    description: "A sample portfolio card.",
+    description:
+      "Sample project showcasing building construction, foundation work, structural framework and masonry.",
     imageUrl:
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85",
-    featured: true
+      "https://images.unsplash.com/photo-1503387762-592deb58ef4e",
+    featured: true,
   },
   {
     _id: "demo-2",
-    title: "Home Renovation",
-    category: "Renovation",
+    title: "RCC Structural Framework",
+    category: "RCC & Concrete Work",
     location: "Delhi NCR",
-    description: "A sample portfolio card.",
+    description:
+      "Sample RCC construction featuring reinforced concrete columns, beams, slabs and structural elements.",
     imageUrl:
-      "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85"
+      "https://images.unsplash.com/photo-1504307651254-35680f356dfd",
+    featured: true,
   },
   {
     _id: "demo-3",
-    title: "Civil & Finishing Work",
-    category: "Civil Work",
+    title: "MS Steel Structure",
+    category: "MS Structural Work",
     location: "Delhi NCR",
-    description: "A sample portfolio card.",
+    description:
+      "Sample mild steel structural framework featuring fabricated steel members, columns, beams and load-bearing supports.",
     imageUrl:
-      "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=85"
-  }
+      "https://images.unsplash.com/photo-1511818966892-d7d671e672a2",
+    featured: true,
+  },
+
+
+
 ];
+
 
 // Services
 // Civil Construction Services
@@ -115,15 +124,15 @@ const services = [
     number: "02",
     title: "MS Structure Fabrication & Erection",
     text: "Designing, fabricating and erecting high-quality mild steel structures and load-bearing frameworks. Our services include steel columns, beams, trusses, industrial sheds, structural frames and customised steel support systems for residential, commercial and industrial projects."
-  
+
 
   },
-{
-  icon: Building2,
+  {
+    icon: Building2,
     number: "03",
-      title: "RCC & Civil Work",
-        text: "Professional civil construction work including RCC, foundation, columns, beams, slabs, brickwork and plastering."
-}
+    title: "RCC & Civil Work",
+    text: "Professional civil construction work including RCC, foundation, columns, beams, slabs, brickwork and plastering."
+  }
 ];
 // WhatsApp link
 function waLink(
@@ -287,57 +296,76 @@ function EnquiryForm() {
     });
   };
 
-  async function submit(e) {
-    e.preventDefault();
+  
+async function submit(e) {
+  e.preventDefault();
 
-    setState({
-      loading: true,
-      error: "",
-      success: ""
+  if (state.loading) return;
+
+  setState({
+    loading: true,
+    error: "",
+    success: ""
+  });
+
+  try {
+    const res = await fetch(`${API}/enquiries`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(form)
     });
 
+    // Safely read both JSON and plain-text responses
+    const responseText = await res.text();
+
+    let data = {};
+
     try {
-      const res = await fetch(`${API}/enquiries`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(form)
-      });
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      data = { message: responseText };
+    }
 
-      const data = await res.json();
-
-      if (!res.ok) {
+    if (!res.ok) {
+      if (res.status === 429) {
         throw new Error(
-          data.message || "Could not send your enquiry."
+          "Too many enquiries submitted. Please wait a few minutes or contact us on WhatsApp."
         );
       }
 
-      setState({
-        loading: false,
-        error: "",
-        success: "Thank you! Your enquiry has been received."
-      });
-
-      setForm({
-        name: "",
-        phone: "",
-        email: "",
-        projectType: "New Construction",
-        location: "",
-        budget: "",
-        message: ""
-      });
-    } catch (err) {
-      setState({
-        loading: false,
-        error:
-          err.message ||
-          "The enquiry service is not connected yet. Please use WhatsApp or call.",
-        success: ""
-      });
+      throw new Error(
+        data.message || "Could not send your enquiry. Please try again."
+      );
     }
+
+    setState({
+      loading: false,
+      error: "",
+      success: "Thank you! Your enquiry has been received."
+    });
+
+    setForm({
+      name: "",
+      phone: "",
+      email: "",
+      projectType: "New Building Construction",
+      location: "",
+      budget: "",
+      message: ""
+    });
+
+  } catch (err) {
+    setState({
+      loading: false,
+      error: err.message ||
+        "Unable to send your enquiry. Please contact us through WhatsApp.",
+      success: ""
+    });
   }
+}
+
 
   return (
     <form className="enquiry-form" onSubmit={submit}>
@@ -412,30 +440,30 @@ function EnquiryForm() {
             onChange={change}
           >
             <option value="">Select Type of Work</option>
-<option value="New Building Construction">
-  New Building Construction
-</option>
-<option value="RCC and Concrete Work">
-  RCC and Concrete Work
-</option>
-<option value="MS Structural Fabrication and Erection">
-  MS Structural Fabrication & Erection
-</option>
-<option value="Industrial Sheds and Steel Structures">
-  Industrial Sheds & Steel Structures
-</option>
-<option value="Structural Steel Framework">
-  Structural Steel Framework
-</option>
-<option value="Civil Construction Work">
-  Civil Construction Work
-</option>
-<option value="Building Renovation and Structural Repair">
-  Building Renovation & Structural Repair
-</option>
-<option value="Other">
-  Other
-</option>
+            <option value="New Building Construction">
+              New Building Construction
+            </option>
+            <option value="RCC and Concrete Work">
+              RCC and Concrete Work
+            </option>
+            <option value="MS Structure Fabrication and Erection">
+              MS Structural Fabrication & Erection
+            </option>
+            <option value="Industrial Sheds and Steel Structures">
+              Industrial Sheds & Steel Structures
+            </option>
+            <option value="Structural Steel Framework">
+              Structural Steel Framework
+            </option>
+            <option value="Civil Construction Work">
+              Civil Construction Work
+            </option>
+            <option value="Building Renovation and Structural Repair">
+              Building Renovation & Structural Repair
+            </option>
+            <option value="Other">
+              Other
+            </option>
           </select>
         </label>
 
@@ -508,9 +536,12 @@ function App() {
 
   const categories = [
     "All",
-    "New Construction",
-    "Renovation",
-    "Civil Work"
+    "New Building Construction",
+    "RCC & Concrete Work",
+    "MS Structure Work",
+    "Industrial Sheds",
+    "Civil Construction",
+    "Structural Repair",
   ];
 
   const visibleProjects = useMemo(
@@ -531,7 +562,19 @@ function App() {
           throw new Error("Unable to load projects");
         }
 
-        const data = await response.json();
+        const text = await response.text();
+
+        let data;
+
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error(text || "Something went wrong. Please try again.");
+        }
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to send enquiry.");
+        }
 
         console.log("Projects received:", data.projects);
 

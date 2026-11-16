@@ -16,6 +16,10 @@ import { requireAdmin } from "./middleware.js";
 import { sendEnquiryEmail } from "./mailer.js";
 
 const app = express();
+
+// Trust Render's reverse proxy to identify visitor IP addresses
+app.set("trust proxy", 1);
+
 const port = Number(process.env.PORT || 5000);
 
 const getPublicApiUrl = req => {
@@ -94,25 +98,35 @@ const upload = multer({
 // RATE LIMITING
 // --------------------------------------------------
 
+
+// GLOBAL API RATE LIMIT
 app.use(
   "/api",
   rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 180,
     standardHeaders: "draft-7",
-    legacyHeaders: false
+    legacyHeaders: false,
+    message: {
+      message: "Too many requests. Please try again later."
+    }
   })
 );
 
+// CUSTOMER ENQUIRY RATE LIMIT
 app.use(
   "/api/enquiries",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 8,
+    limit: 12,
     standardHeaders: "draft-7",
-    legacyHeaders: false
+    legacyHeaders: false,
+    message: {
+      message: "Too many enquiries. Please try again after 15 minutes."
+    }
   })
 );
+
 
 // --------------------------------------------------
 // HELPER FUNCTIONS
@@ -137,13 +151,18 @@ const projectCategories = [
   "Residential"
 ];
 
+
 const enquiryTypes = [
-  "New Construction",
-  "Renovation",
-  "Civil Work",
-  "Commercial",
+  "New Building Construction",
+  "RCC and Concrete Work",
+  "MS Structure Fabrication and Erection",
+  "Industrial Sheds and Steel Structures",
+  "Structural Steel Framework",
+  "Civil Construction Work",
+  "Building Renovation and Structural Repair",
   "Other"
 ];
+
 
 const enquiryStatuses = [
   "New",
@@ -609,13 +628,18 @@ app.use((error, _req, res, _next) => {
       message: error.message
     });
   }
-
   if (error.name === "ValidationError") {
+    console.error("ENQUIRY VALIDATION ERROR:", error);
+  
     return res.status(400).json({
-      message: "Some submitted information is invalid."
+      message: "Some submitted information is invalid.",
+      details: Object.values(error.errors).map((err) => ({
+        field: err.path,
+        reason: err.message,
+        value: err.value
+      }))
     });
   }
-
   if (error.name === "CastError") {
     return res.status(400).json({
       message: "Invalid record identifier."

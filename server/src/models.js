@@ -29,11 +29,22 @@ const enquirySchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 100 },
     phone: { type: String, required: true, trim: true, maxlength: 20 },
     email: { type: String, trim: true, lowercase: true, maxlength: 254 },
+
     projectType: {
       type: String,
       required: true,
-      enum: ["New Construction", "Renovation", "Civil Work", "Commercial", "Other"]
+      enum: [
+        "New Building Construction",
+        "RCC and Concrete Work",
+        "MS Structure Fabrication and Erection",
+        "Industrial Sheds and Steel Structures",
+        "Structural Steel Framework",
+        "Civil Construction Work",
+        "Building Renovation and Structural Repair",
+        "Other"
+      ]
     },
+
     location: { type: String, required: true, trim: true, maxlength: 160 },
     budget: { type: String, trim: true, maxlength: 80 },
     message: { type: String, required: true, trim: true, maxlength: 2000 },
