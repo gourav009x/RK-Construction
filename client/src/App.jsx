@@ -135,12 +135,8 @@ const services = [
   }
 ];
 // WhatsApp link
-function waLink(
-  message = "Hello RK Construction, I would like to discuss a construction project."
-) {
-  return WHATSAPP
-    ? `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`
-    : "#contact";
+function waLink(message = "Hello, I want to discuss a construction project.") {
+  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`;
 }
 
 // Header
