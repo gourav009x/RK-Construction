@@ -102,27 +102,27 @@ const demoProjects = [
 ];
 
 // Services
+// Civil Construction Services
 const services = [
   {
     icon: Building2,
     number: "01",
-    title: "New Construction",
-    text: "From planning and foundational work to structure and finishing, discuss your new residential or commercial build with our team."
-  },
-  {
-    icon: Ruler,
-    number: "02",
-    title: "Renovation",
-    text: "Refresh an existing space with renovation work planned around your requirements, site conditions and budget."
+    title: "New Building Construction",
+    text: "Complete residential and commercial building construction, including foundation, RCC structure, brickwork and concrete work."
   },
   {
     icon: Hammer,
+    number: "02",
+    title: "Structural Renovation & Repair",
+    text: "Civil renovation and repair work for existing buildings, including structural improvements, masonry, plastering and concrete repairs."
+  },
+  {
+    icon: HardHat,
     number: "03",
-    title: "Civil Work",
-    text: "Enquire about masonry, plastering, tiling and other civil work for your property."
+    title: "RCC & Civil Work",
+    text: "Professional civil construction work including RCC, foundation, columns, beams, slabs, brickwork and plastering."
   }
 ];
-
 // WhatsApp link
 function waLink(
   message = "Hello RK Construction, I would like to discuss a construction project."

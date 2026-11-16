@@ -136,7 +136,7 @@ a {
 .hero-photo {
     position: absolute;
     inset: 0;
-    background-image: url('https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=2200&q=90');
+    background-image: url("/images/hero-construction.jpeg");
     background-size: cover;
     background-position: center 54%;
     transform: scale(1.02)
