@@ -960,16 +960,22 @@ function App() {
         </small>
       </footer >
 
+
       {/* MOBILE ACTIONS */}
-      < div className="mobile-actions" >
+      <div className="mobile-actions">
         <a href={PHONE ? `tel:${PHONE}` : "#contact"}>
           <Phone size={17} /> Call
         </a>
 
-        <a href={waLink()}>
+        <a
+          href="https://wa.me/918769492584"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <MessageCircle size={17} /> WhatsApp
         </a>
-      </div >
+      </div>
+
     </>
   );
 }
