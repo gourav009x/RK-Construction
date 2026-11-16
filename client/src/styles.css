@@ -142,6 +142,23 @@ a {
     transform: scale(1.02)
 }
 
+
+.brand-image {
+    width: 190px;
+    height: 70px;
+    object-fit: contain;
+    display: block;
+    mix-blend-mode: multiply;
+    background: transparent;
+    filter: contrast(1.08);
+  }
+  
+  .brand {
+    display: flex;
+    align-items: center;
+    background: transparent;
+  }
+  
 .hero-shade {
     position: absolute;
     inset: 0;
@@ -1191,7 +1208,8 @@ td small {
 
 @media(max-width:1000px) {
     .header {
-        padding: 0 4%
+        padding: 0 4%;
+        background: #f7f6f2;
     }
 
     .nav {

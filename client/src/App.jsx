@@ -111,17 +111,19 @@ const services = [
     text: "Complete residential and commercial building construction, including foundation, RCC structure, brickwork and concrete work."
   },
   {
-    icon: Hammer,
+    icon: Building2,
     number: "02",
-    title: "Structural Renovation & Repair",
-    text: "Civil renovation and repair work for existing buildings, including structural improvements, masonry, plastering and concrete repairs."
+    title: "MS Structure Fabrication & Erection",
+    text: "Designing, fabricating and erecting high-quality mild steel structures and load-bearing frameworks. Our services include steel columns, beams, trusses, industrial sheds, structural frames and customised steel support systems for residential, commercial and industrial projects."
+  
+
   },
-  {
-    icon: HardHat,
+{
+  icon: Building2,
     number: "03",
-    title: "RCC & Civil Work",
-    text: "Professional civil construction work including RCC, foundation, columns, beams, slabs, brickwork and plastering."
-  }
+      title: "RCC & Civil Work",
+        text: "Professional civil construction work including RCC, foundation, columns, beams, slabs, brickwork and plastering."
+}
 ];
 // WhatsApp link
 function waLink(
@@ -150,17 +152,13 @@ function Header() {
         href="#home"
         aria-label="RK Construction home"
       >
-        <span className="brand-mark">
-          <Building2 size={25} />
-        </span>
-
-        <span>
-          <strong>
-            RK <b>CONSTRUCTION</b>
-          </strong>
-          <small>BUILDING WITH INTEGRITY</small>
-        </span>
+        <img
+          src="/images/rk-logo.png"
+          alt="RK Construction Logo"
+          className="brand-image"
+        />
       </a>
+
 
       <button
         className="menu-toggle"
@@ -413,11 +411,31 @@ function EnquiryForm() {
             value={form.projectType}
             onChange={change}
           >
-            <option>New Construction</option>
-            <option>Renovation</option>
-            <option>Civil Work</option>
-            <option>Commercial</option>
-            <option>Other</option>
+            <option value="">Select Type of Work</option>
+<option value="New Building Construction">
+  New Building Construction
+</option>
+<option value="RCC and Concrete Work">
+  RCC and Concrete Work
+</option>
+<option value="MS Structural Fabrication and Erection">
+  MS Structural Fabrication & Erection
+</option>
+<option value="Industrial Sheds and Steel Structures">
+  Industrial Sheds & Steel Structures
+</option>
+<option value="Structural Steel Framework">
+  Structural Steel Framework
+</option>
+<option value="Civil Construction Work">
+  Civil Construction Work
+</option>
+<option value="Building Renovation and Structural Repair">
+  Building Renovation & Structural Repair
+</option>
+<option value="Other">
+  Other
+</option>
           </select>
         </label>
 
@@ -722,151 +740,151 @@ function App() {
               alt="Architectural construction detail"
               loading="lazy"
             />
-          
 
-          <div className="image-stamp">
-            <HardHat size={24} />
-            <span>
-              BUILT WITH
+
+            <div className="image-stamp">
+              <HardHat size={24} />
+              <span>
+                BUILT WITH
+                <br />
+                PURPOSE
+              </span>
+            </div>
+          </div>
+
+          <div className="about-copy">
+            <SectionLabel>ABOUT RK CONSTRUCTION</SectionLabel>
+
+            <h2>
+              Your project deserves
               <br />
-              PURPOSE
-            </span>
-          </div>
-        </div>
+              <em>care at every stage.</em>
+            </h2>
 
-        <div className="about-copy">
-          <SectionLabel>ABOUT RK CONSTRUCTION</SectionLabel>
+            <p>
+              Whether you are planning a new build, upgrading
+              an existing property or looking for civil work,
+              a clear conversation is the first step.
+            </p>
 
-          <h2>
-            Your project deserves
-            <br />
-            <em>care at every stage.</em>
-          </h2>
+            <p>
+              RK Construction is based in Karol Bagh, Delhi.
+              Get in touch to discuss your site, timeline,
+              scope and estimate.
+            </p>
 
-          <p>
-            Whether you are planning a new build, upgrading
-            an existing property or looking for civil work,
-            a clear conversation is the first step.
-          </p>
+            <div className="about-points">
+              <div>
+                <ShieldCheck />
+                <span>
+                  <strong>Scope-first approach</strong>
+                  <small>
+                    Discuss requirements before work begins.
+                  </small>
+                </span>
+              </div>
 
-          <p>
-            RK Construction is based in Karol Bagh, Delhi.
-            Get in touch to discuss your site, timeline,
-            scope and estimate.
-          </p>
-
-          <div className="about-points">
-            <div>
-              <ShieldCheck />
-              <span>
-                <strong>Scope-first approach</strong>
-                <small>
-                  Discuss requirements before work begins.
-                </small>
-              </span>
+              <div>
+                <Clock3 />
+                <span>
+                  <strong>Planning and coordination</strong>
+                  <small>
+                    Talk through expected timelines and next steps.
+                  </small>
+                </span>
+              </div>
             </div>
 
-            <div>
-              <Clock3 />
-              <span>
-                <strong>Planning and coordination</strong>
-                <small>
-                  Talk through expected timelines and next steps.
-                </small>
-              </span>
+            <a className="button button-dark" href="#contact">
+              Get in touch <ArrowRight size={17} />
+            </a>
+          </div>
+        </section>
+
+        {/* CONTACT */}
+        <section className="contact-section section" id="contact">
+          <div className="contact-intro">
+            <SectionLabel>LET'S BUILD SOMETHING</SectionLabel>
+
+            <h2>
+              Have a project
+              <br />
+              in <em>mind?</em>
+            </h2>
+
+            <p>
+              Tell us what you have planned. Start with a
+              conversation about the site, scope and estimate.
+            </p>
+
+            <div className="contact-methods">
+              <a href={PHONE ? `tel:${PHONE}` : "#contact"}>
+                <span className="method-icon">
+                  <Phone />
+                </span>
+
+                <span>
+                  <small>CALL RK CONSTRUCTION</small>
+                  <strong>
+                    {PHONE || "Add business phone number"}
+                  </strong>
+                </span>
+
+                <ArrowRight size={17} />
+              </a>
+
+              <a
+                href={waLink()}
+                target={WHATSAPP ? "_blank" : undefined}
+                rel={WHATSAPP ? "noreferrer" : undefined}
+              >
+                <span className="method-icon">
+                  <MessageCircle />
+                </span>
+
+                <span>
+                  <small>WHATSAPP ENQUIRIES</small>
+                  <strong>
+                    {WHATSAPP
+                      ? "Chat with our team"
+                      : "Add WhatsApp number"}
+                  </strong>
+                </span>
+
+                <ArrowRight size={17} />
+              </a>
+
+              <div className="location-row">
+                <span className="method-icon">
+                  <MapPin />
+                </span>
+
+                <span>
+                  <small>OUR BASE</small>
+                  <strong>Karol Bagh, Delhi, India</strong>
+                </span>
+              </div>
             </div>
           </div>
 
-          <a className="button button-dark" href="#contact">
-            Get in touch <ArrowRight size={17} />
+          <EnquiryForm />
+        </section>
+
+        {/* FINAL CTA */}
+        <section className="last-cta">
+          <div>
+            <span>READY TO GET STARTED?</span>
+            <h2>Let's make a solid plan.</h2>
+          </div>
+
+          <a className="button button-gold" href="#contact">
+            Start an enquiry <ArrowRight size={17} />
           </a>
-        </div>
-      </section>
+        </section>
+      </main >
 
-      {/* CONTACT */}
-      <section className="contact-section section" id="contact">
-        <div className="contact-intro">
-          <SectionLabel>LET'S BUILD SOMETHING</SectionLabel>
-
-          <h2>
-            Have a project
-            <br />
-            in <em>mind?</em>
-          </h2>
-
-          <p>
-            Tell us what you have planned. Start with a
-            conversation about the site, scope and estimate.
-          </p>
-
-          <div className="contact-methods">
-            <a href={PHONE ? `tel:${PHONE}` : "#contact"}>
-              <span className="method-icon">
-                <Phone />
-              </span>
-
-              <span>
-                <small>CALL RK CONSTRUCTION</small>
-                <strong>
-                  {PHONE || "Add business phone number"}
-                </strong>
-              </span>
-
-              <ArrowRight size={17} />
-            </a>
-
-            <a
-              href={waLink()}
-              target={WHATSAPP ? "_blank" : undefined}
-              rel={WHATSAPP ? "noreferrer" : undefined}
-            >
-              <span className="method-icon">
-                <MessageCircle />
-              </span>
-
-              <span>
-                <small>WHATSAPP ENQUIRIES</small>
-                <strong>
-                  {WHATSAPP
-                    ? "Chat with our team"
-                    : "Add WhatsApp number"}
-                </strong>
-              </span>
-
-              <ArrowRight size={17} />
-            </a>
-
-            <div className="location-row">
-              <span className="method-icon">
-                <MapPin />
-              </span>
-
-              <span>
-                <small>OUR BASE</small>
-                <strong>Karol Bagh, Delhi, India</strong>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <EnquiryForm />
-      </section>
-
-      {/* FINAL CTA */}
-      <section className="last-cta">
-        <div>
-          <span>READY TO GET STARTED?</span>
-          <h2>Let's make a solid plan.</h2>
-        </div>
-
-        <a className="button button-gold" href="#contact">
-          Start an enquiry <ArrowRight size={17} />
-        </a>
-      </section>
-    </main >
-
-      {/* FOOTER */ }
-      < footer className = "footer" >
+      {/* FOOTER */}
+      < footer className="footer" >
         <a className="brand footer-brand" href="#home">
           <span className="brand-mark">
             <Building2 size={23} />
@@ -895,8 +913,8 @@ function App() {
         </small>
       </footer >
 
-    {/* MOBILE ACTIONS */ }
-    < div className = "mobile-actions" >
+      {/* MOBILE ACTIONS */}
+      < div className="mobile-actions" >
         <a href={PHONE ? `tel:${PHONE}` : "#contact"}>
           <Phone size={17} /> Call
         </a>
