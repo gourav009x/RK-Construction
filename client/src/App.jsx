@@ -138,11 +138,12 @@ const services = [
 function waLink(message = "Hello, I want to discuss a construction project.") {
   if (!WHATSAPP) return "#";
 
+
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`;
 }
 
-console.log("WhatsApp number:", WHATSAPP);
-console.log("WhatsApp link:", waLink());
+// console.log("WhatsApp number:", WHATSAPP);
+// console.log("WhatsApp link:", waLink());
 // Header
 function Header() {
   const [open, setOpen] = useState(false);
@@ -296,75 +297,75 @@ function EnquiryForm() {
     });
   };
 
-  
-async function submit(e) {
-  e.preventDefault();
 
-  if (state.loading) return;
+  async function submit(e) {
+    e.preventDefault();
 
-  setState({
-    loading: true,
-    error: "",
-    success: ""
-  });
+    if (state.loading) return;
 
-  try {
-    const res = await fetch(`${API}/enquiries`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(form)
+    setState({
+      loading: true,
+      error: "",
+      success: ""
     });
 
-    // Safely read both JSON and plain-text responses
-    const responseText = await res.text();
-
-    let data = {};
-
     try {
-      data = responseText ? JSON.parse(responseText) : {};
-    } catch {
-      data = { message: responseText };
-    }
+      const res = await fetch(`${API}/enquiries`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(form)
+      });
 
-    if (!res.ok) {
-      if (res.status === 429) {
+      // Safely read both JSON and plain-text responses
+      const responseText = await res.text();
+
+      let data = {};
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { message: responseText };
+      }
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          throw new Error(
+            "Too many enquiries submitted. Please wait a few minutes or contact us on WhatsApp."
+          );
+        }
+
         throw new Error(
-          "Too many enquiries submitted. Please wait a few minutes or contact us on WhatsApp."
+          data.message || "Could not send your enquiry. Please try again."
         );
       }
 
-      throw new Error(
-        data.message || "Could not send your enquiry. Please try again."
-      );
+      setState({
+        loading: false,
+        error: "",
+        success: "Thank you! Your enquiry has been received."
+      });
+
+      setForm({
+        name: "",
+        phone: "",
+        email: "",
+        projectType: "New Building Construction",
+        location: "",
+        budget: "",
+        message: ""
+      });
+
+    } catch (err) {
+      setState({
+        loading: false,
+        error: err.message ||
+          "Unable to send your enquiry. Please contact us through WhatsApp.",
+        success: ""
+      });
     }
-
-    setState({
-      loading: false,
-      error: "",
-      success: "Thank you! Your enquiry has been received."
-    });
-
-    setForm({
-      name: "",
-      phone: "",
-      email: "",
-      projectType: "New Building Construction",
-      location: "",
-      budget: "",
-      message: ""
-    });
-
-  } catch (err) {
-    setState({
-      loading: false,
-      error: err.message ||
-        "Unable to send your enquiry. Please contact us through WhatsApp.",
-      success: ""
-    });
   }
-}
 
 
   return (
@@ -384,21 +385,21 @@ async function submit(e) {
         </div>
       )}
 
-      
-{state.error && (
-  <div className="notice error">
-    {state.error}{" "}
-    {WHATSAPP && (
-      <a
-        href={waLink()}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Message us on WhatsApp
-      </a>
-    )}
-  </div>
-)}
+
+      {state.error && (
+        <div className="notice error">
+          {state.error}{" "}
+          {WHATSAPP && (
+            <a
+              href={waLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Message us on WhatsApp
+            </a>
+          )}
+        </div>
+      )}
 
       <div className="form-grid">
         <label>
@@ -881,10 +882,11 @@ function App() {
                 <ArrowRight size={17} />
               </a>
 
+
               <a
-                href={waLink()}
-                target={WHATSAPP ? "_blank" : undefined}
-                rel={WHATSAPP ? "noreferrer" : undefined}
+                href="https://wa.me/918769492584"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <span className="method-icon">
                   <MessageCircle />
@@ -892,15 +894,12 @@ function App() {
 
                 <span>
                   <small>WHATSAPP ENQUIRIES</small>
-                  <strong>
-                    {WHATSAPP
-                      ? "Chat with our team"
-                      : "Add WhatsApp number"}
-                  </strong>
+                  <strong>Chat with our team</strong>
                 </span>
 
                 <ArrowRight size={17} />
               </a>
+
 
               <div className="location-row">
                 <span className="method-icon">
